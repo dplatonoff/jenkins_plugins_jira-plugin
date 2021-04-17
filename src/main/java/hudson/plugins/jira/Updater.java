@@ -6,6 +6,7 @@ import hudson.Util;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.plugins.jira.extension.RemoteLink;
 import hudson.plugins.jira.model.JiraIssue;
 import hudson.plugins.jira.selector.AbstractIssueSelector;
 import hudson.scm.ChangeLogSet;
@@ -22,9 +23,7 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.rmi.RemoteException;
 import java.text.DateFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -109,14 +108,12 @@ class Updater {
             } else {
                 doUpdate = run.getResult().isBetterOrEqualTo(Result.UNSTABLE);
             }
-            boolean useWikiStyleComments = site.supportsWikiStyleComment;
 
             issues = getJiraIssues(ids, session, logger);
             run.addAction(new JiraBuildAction(issues));
 
             if (doUpdate) {
-                submitComments(run, logger, rootUrl, issues,
-                        session, useWikiStyleComments, site.recordScmChanges, site.groupVisibility, site.roleVisibility);
+                submitUpdates(run, logger, rootUrl, issues, session, site);
             } else {
                 // this build didn't work, so carry forward the issues to the next build
                 run.addAction(new JiraCarryOverAction(issues));
@@ -147,6 +144,8 @@ class Updater {
      * @param groupVisibility
      * @throws RestClientException
      */
+    // no longer used, kept for backwards compatibility (see similar comments in JiraSite)
+    @Deprecated
     void submitComments(
             Run<?, ?> build, PrintStream logger, String jenkinsRootUrl,
             Set<JiraIssue> issues, JiraSession session,
@@ -164,6 +163,70 @@ class Updater {
                         createComment(build, useWikiStyleComments, jenkinsRootUrl, recordScmChanges, issue),
                         groupVisibility, roleVisibility
                 );
+                if (!labels.isEmpty()) {
+                    session.addLabels(issue.getKey(), labels);
+                }
+
+            } catch (RestClientException e) {
+
+                if (e.getStatusCode().or(0).equals(404)) {
+                    logger.println(issue.getKey() + " - Jira issue not found. Dropping comment from update queue.");
+                }
+
+                if (e.getStatusCode().or(0).equals(403)) {
+                    logger.println(issue.getKey() + " - Jenkins Jira user does not have permissions to comment on this issue. Preserving comment for future update.");
+                    continue;
+                }
+
+                if (e.getStatusCode().or(0).equals(401)) {
+                    logger.println(issue.getKey() + " - Jenkins Jira authentication problem. Preserving comment for future update.");
+                    continue;
+                }
+
+                logger.println(Messages.FailedToUpdateIssueWithCarryOver(issue.getKey()));
+                logger.println(e.getLocalizedMessage());
+            }
+
+            // if no exception is thrown during update, remove from the list as successfully updated
+            issues.remove(issue);
+        }
+
+    }
+
+    /**
+     * Submits updates to all Jira issues in the set. Posts comments and/or add links, depending on the site configuration.
+     *
+     * @param build build status
+     * @param logger logger
+     * @param jenkinsRootUrl root URL of the Jenkins instance
+     * @param issues issue set
+     * @param session Jira REST API session
+     * @param site Jira site configuration
+     * @throws RestClientException
+     */
+    void submitUpdates(
+            Run<?, ?> build, PrintStream logger, String jenkinsRootUrl,
+            Set<JiraIssue> issues, JiraSession session, JiraSite site) throws RestClientException {
+
+        // copy to prevent ConcurrentModificationException
+        Set<JiraIssue> copy = new HashSet<>(issues);
+
+        for (JiraIssue issue : copy) {
+            logger.println(Messages.UpdatingIssue(issue.getKey()));
+
+            try {
+                if (site.commentsEnabled) {
+                    session.addComment(
+                            issue.getKey(),
+                            createComment(build, site.supportsWikiStyleComment, jenkinsRootUrl, site.recordScmChanges, issue),
+                            site.groupVisibility, site.roleVisibility
+                    );
+                }
+                if (site.remoteLinksEnabled) {
+                    session.addRemoteLink(
+                            issue.getKey(),
+                            createRemoteLink(build, jenkinsRootUrl));
+                }
                 if (!labels.isEmpty()) {
                     session.addLabels(issue.getKey(), labels);
                 }
@@ -241,6 +304,29 @@ class Updater {
                 Util.encode(jenkinsRootUrl + build.getUrl()),
                 getScmComments(wikiStyle, build, recordScmChanges, jiraIssue),
                 result.toString());
+    }
+
+    /**
+     * Creates a remote link content entity for a given build. The link text is the same
+     * as the comment title (e.g. <code>SUCCESS: Integrated in Job #nnnn</code>).
+     * <p>
+     * Uses a public Jenkins CDN to render build icons. This is helpful when Jenkins
+     * is firewalled, which prevents Jira from loading icons.
+     *
+     * @param build build status
+     * @param jenkinsRootUrl root Jenkins URL
+     * @return remote link content
+     */
+    private RemoteLink createRemoteLink(Run<?, ?> build, String jenkinsRootUrl) {
+        String buildUrl = jenkinsRootUrl + build.getUrl();
+        Result result = build.getResult();
+
+        return new RemoteLink(buildUrl,
+                result == null ? null : "https://ci.jenkins.io/images/16x16/" + result.color.getImage(),
+                buildUrl,
+                result == null
+                        ? format("Integrated in %s", build.getFullDisplayName())
+                        : format("%s: Integrated in %s", result.toString(), build.getFullDisplayName()));
     }
 
     private String getScmComments(boolean wikiStyle, Run<?, ?> run, boolean recordScmChanges, JiraIssue jiraIssue) {

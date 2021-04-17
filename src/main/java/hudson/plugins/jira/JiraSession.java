@@ -10,6 +10,7 @@ import com.atlassian.jira.rest.client.api.domain.Status;
 import com.atlassian.jira.rest.client.api.domain.Transition;
 import com.atlassian.jira.rest.client.api.domain.Version;
 import hudson.plugins.jira.extension.ExtendedVersion;
+import hudson.plugins.jira.extension.RemoteLink;
 import hudson.plugins.jira.model.JiraIssueField;
 import org.apache.commons.lang.StringUtils;
 
@@ -78,6 +79,16 @@ public class JiraSession {
     public void addComment(String issueId, String comment,
                            String groupVisibility, String roleVisibility) {
         service.addComment(issueId, comment, groupVisibility, roleVisibility);
+    }
+
+    /**
+     * Adds a link to the existing issue.
+     *
+     * @param issueId Jira issue ID
+     * @param link link content entity
+     */
+    public void addRemoteLink(String issueId, RemoteLink link) {
+        service.addRemoteLink(issueId, link);
     }
 
     /**

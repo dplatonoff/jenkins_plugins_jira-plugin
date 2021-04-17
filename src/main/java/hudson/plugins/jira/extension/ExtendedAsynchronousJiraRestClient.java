@@ -9,12 +9,14 @@ import java.net.URI;
 public class ExtendedAsynchronousJiraRestClient extends AsynchronousJiraRestClient implements ExtendedJiraRestClient {
     private final ExtendedVersionRestClient extendedVersionRestClient;
     private final ExtendedMyPermissionsRestClient extendedMyPermissionsRestClient;
+    private final RemoteLinkRestClient extendedIssueRestClient;
 
     public ExtendedAsynchronousJiraRestClient(URI serverUri, DisposableHttpClient httpClient) {
         super(serverUri, httpClient);
         final URI baseUri = UriBuilder.fromUri(serverUri).path("/rest/api/latest").build();
         extendedVersionRestClient = new ExtendedAsynchronousVersionRestClient(baseUri, httpClient);
         extendedMyPermissionsRestClient = new ExtendedAsynchronousMyPermissionsRestClient(baseUri, httpClient);
+        extendedIssueRestClient = new ExtendedAsynchronousRemoteLinkRestClient(httpClient);
     }
 
     @Override
@@ -25,5 +27,10 @@ public class ExtendedAsynchronousJiraRestClient extends AsynchronousJiraRestClie
     @Override
     public ExtendedMyPermissionsRestClient getExtendedMyPermissionsRestClient() {
         return extendedMyPermissionsRestClient;
+    }
+
+    @Override
+    public RemoteLinkRestClient getRemoteLinkRestClient() {
+        return extendedIssueRestClient;
     }
 }

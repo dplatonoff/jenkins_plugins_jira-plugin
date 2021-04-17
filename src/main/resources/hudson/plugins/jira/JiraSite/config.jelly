@@ -24,6 +24,11 @@
   <f:entry>
     <f:checkbox title="${%Update Relevant Jira Issues For All Build Results}" field="updateJiraIssueForAllStatus" />
   </f:entry>
+  <f:entry title="${%Issue update action}">
+    <f:checkbox title="${%Add a comment with build details}" field="commentsEnabled" />
+    <br />
+    <f:checkbox title="${%Add a link to the build}" field="remoteLinksEnabled" />
+  </f:entry>
   <f:entry title="${%Credentials}" field="credentialsId">
     <c:select />
   </f:entry>

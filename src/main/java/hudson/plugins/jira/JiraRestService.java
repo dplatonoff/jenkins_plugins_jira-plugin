@@ -41,6 +41,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.plugins.jira.extension.ExtendedJiraRestClient;
 import hudson.plugins.jira.extension.ExtendedVersion;
 import hudson.plugins.jira.extension.ExtendedVersionInput;
+import hudson.plugins.jira.extension.RemoteLink;
 import hudson.plugins.jira.model.JiraIssueField;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
@@ -147,7 +148,24 @@ public class JiraRestService {
           LOGGER.log(WARNING, "Jira REST client add comment error. cause: " + e.getMessage(), e);
       }
     }
-  
+
+    /**
+     * Adds a build URL to a Jira issue as a remote link.
+     *
+     * @param issueId Jira issue ID
+     * @param link link content entity
+     */
+    public void addRemoteLink(String issueId, RemoteLink link) {
+        final URIBuilder builder = new URIBuilder(uri)
+                .setPath(String.format("%s/issue/%s/remotelink", baseApiPath, issueId));
+
+        try {
+            jiraRestClient.getRemoteLinkRestClient().addRemoteLink(builder.build(), link).get(timeout, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            LOGGER.log(WARNING, "Jira REST client add link error. cause: " + e.getMessage(), e);
+        }
+    }
+
     public Issue getIssue(String issueKey) {
         try {
             return jiraRestClient.getIssueClient().getIssue(issueKey).get(timeout, TimeUnit.SECONDS);

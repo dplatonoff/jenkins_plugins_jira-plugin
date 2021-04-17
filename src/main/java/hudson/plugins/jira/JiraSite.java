@@ -196,7 +196,21 @@ public class JiraSite extends AbstractDescribableImpl<JiraSite> {
      * @since 1.22
      */
     public boolean updateJiraIssueForAllStatus;
-    
+
+    /**
+     * Enables adding build result comments to Jira issues (default Jenkins behavior).
+     *
+     * @since 3.3
+     */
+    public boolean commentsEnabled = true;
+
+    /**
+     * Enables linking builds to Jira issues (compact behavior, reduces comment noise).
+     *
+     * @since 3.3
+     */
+    public boolean remoteLinksEnabled;
+
     /**
      * connection timeout used when calling jira rest api, in seconds
      */
@@ -479,6 +493,24 @@ public class JiraSite extends AbstractDescribableImpl<JiraSite> {
         this.updateJiraIssueForAllStatus = updateJiraIssueForAllStatus;
     }
 
+    public boolean isCommentsEnabled() {
+        return commentsEnabled;
+    }
+
+    @DataBoundSetter
+    public void setCommentsEnabled(boolean commentsEnabled) {
+        this.commentsEnabled = commentsEnabled;
+    }
+
+    public boolean isRemoteLinksEnabled() {
+        return remoteLinksEnabled;
+    }
+
+    @DataBoundSetter
+    public void setRemoteLinksEnabled(boolean remoteLinksEnabled) {
+        this.remoteLinksEnabled = remoteLinksEnabled;
+    }
+
     @SuppressWarnings("unused")
     protected Object readResolve() {
         JiraSite jiraSite;
@@ -493,6 +525,8 @@ public class JiraSite extends AbstractDescribableImpl<JiraSite> {
         jiraSite.setAppendChangeTimestamp( appendChangeTimestamp );
         jiraSite.setDisableChangelogAnnotations( disableChangelogAnnotations );
         jiraSite.setDateTimePattern( dateTimePattern );
+        jiraSite.setCommentsEnabled( commentsEnabled );
+        jiraSite.setRemoteLinksEnabled( remoteLinksEnabled );
         return jiraSite;
     }
 
