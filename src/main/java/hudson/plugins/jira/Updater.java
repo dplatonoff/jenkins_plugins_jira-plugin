@@ -16,6 +16,7 @@ import hudson.scm.RepositoryBrowser;
 import hudson.scm.SCM;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.ObjectUtils;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -47,6 +48,12 @@ class Updater {
     private List<String> labels;
 
     private static final Logger LOGGER = Logger.getLogger(Updater.class.getName());
+
+    /**
+     * Jenkins public CDN to render build icons. This is helpful when your Jenkins
+     * instance is firewalled, which prevents Jira from loading icons.
+     */
+    private static final String JENKINS_ICONS = "https://ci.jenkins.io/images/16x16/";
 
     /**
      * Debug flag.
@@ -309,9 +316,6 @@ class Updater {
     /**
      * Creates a remote link content entity for a given build. The link text is the same
      * as the comment title (e.g. <code>SUCCESS: Integrated in Job #nnnn</code>).
-     * <p>
-     * Uses a public Jenkins CDN to render build icons. This is helpful when Jenkins
-     * is firewalled, which prevents Jira from loading icons.
      *
      * @param build build status
      * @param jenkinsRootUrl root Jenkins URL
@@ -319,14 +323,12 @@ class Updater {
      */
     private RemoteLink createRemoteLink(Run<?, ?> build, String jenkinsRootUrl) {
         String buildUrl = jenkinsRootUrl + build.getUrl();
-        Result result = build.getResult();
+        Result result = ObjectUtils.defaultIfNull(build.getResult(), Result.NOT_BUILT);
 
         return new RemoteLink(buildUrl,
-                result == null ? null : "https://ci.jenkins.io/images/16x16/" + result.color.getImage(),
+                JENKINS_ICONS + result.color.getImage(),
                 buildUrl,
-                result == null
-                        ? format("Integrated in %s", build.getFullDisplayName())
-                        : format("%s: Integrated in %s", result.toString(), build.getFullDisplayName()));
+                format("%s: Integrated in %s", result.toString(), build.getFullDisplayName()));
     }
 
     private String getScmComments(boolean wikiStyle, Run<?, ?> run, boolean recordScmChanges, JiraIssue jiraIssue) {

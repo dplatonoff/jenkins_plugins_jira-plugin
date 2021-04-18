@@ -88,6 +88,13 @@ public class UpdaterTest {
         }
     }
 
+    private JiraSite defaultSite = new JiraSite.Builder()
+            .withSupportsWikiStyleComment(false)
+            .withRecordScmChanges(false)
+            .withGroupVisibility("")
+            .withRoleVisibility("")
+            .build();
+
     @Before
     public void prepare() {
         SCM scm = mock(SCM.class);
@@ -142,7 +149,7 @@ public class UpdaterTest {
         this.updater = new Updater(build2.getProject().getScm());        
         
         final Set<JiraIssue> ids = new HashSet(Arrays.asList(new JiraIssue("FOOBAR-1", null), new JiraIssue("FOOBAR-2", null)));
-        updater.submitComments(build2, System.out, "http://jenkins", ids, session, false, false, "", "");
+        updater.submitUpdates(build2, System.out, "http://jenkins", ids, session, defaultSite);
 
         Assert.assertEquals(2, comments.size());
         assertThat(comments.get(0).getBody(), Matchers.containsString(entry1.getMsg()));
@@ -187,8 +194,9 @@ public class UpdaterTest {
         // test:
         Set<JiraIssue> ids = new HashSet(Arrays.asList(new JiraIssue("FOOBAR-4711", "Title")));
         Updater updaterCurrent = new Updater(build.getParent().getScm());
-        updaterCurrent.submitComments(build,
-                System.out, "http://jenkins", ids, session, false, false, "", "");
+        
+        updaterCurrent.submitUpdates(build,
+                System.out, "http://jenkins", ids, session, defaultSite);
 
         Assert.assertEquals(1, comments.size());
         String comment = comments.get(0);
@@ -201,8 +209,8 @@ public class UpdaterTest {
         when(changeLogSet.iterator()).thenReturn(entries.iterator());
         ids = new HashSet(Arrays.asList(new JiraIssue("FOOBAR-4711", "Title")));
 
-        updaterCurrent.submitComments(build,
-                System.out, "http://jenkins", ids, session, false, false, "", "");
+        updaterCurrent.submitUpdates(build,
+                System.out, "http://jenkins", ids, session, defaultSite);
 
         Assert.assertEquals(1, comments.size());
         comment = comments.get(0);
